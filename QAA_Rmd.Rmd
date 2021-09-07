@@ -23,8 +23,6 @@ cat FastQC.wrapper.sh
 
 
 
-
-
 ## Plots for 22_3H_both_S16
 #### Graph order: Top two represent mean quality score distribution and the bottom two represent mean 'N' content per base. Left two represent Read 1 (forward) and right two represent Read 2 (reverse). 
 ![Read 1 Quality for 22_3H_both_S16_L008](22_3H_both_S16_L008_R1_001_per_base_quality.png){width=50%}
@@ -68,7 +66,7 @@ cat FastQC.wrapper.sh
 ```{bash}
 cat cutadapt.wrapper.sh
 ```
-
+##Note that the adapter sequences were taken from Illumina's support page for the TRUseq kit (https://support.illumina.com/bulletins/2016/12/what-sequences-do-i-use-for-adapter-trimming.html)
 ## The following table summarizes the proportion of reads that were trimmed:
 
 | File          | Total Proportion trimmed | Proportion of forward reads trimmed | Proportion of reverse reads trimmed |
@@ -79,7 +77,8 @@ cat cutadapt.wrapper.sh
 ### To confirm the adapter sequence orientation, the following command was used to identify sequence lines that contain the adapter:
 ### for Read 1 check (performed on both files, but only one file example shown):
 ```
-zcat /projects/bgmp/shared/2017_sequencing/demultiplexed/22_3H_both_S16_L008_R1_00fastq.gz |  grep 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA' | wc -l
+zcat /projects/bgmp/shared/2017_sequencing/demultiplexed/22_3H_both_S16_L008_R1_00fastq.gz | \
+grep 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA' | wc -l
 ```
 ````
 output: 7563
@@ -87,7 +86,8 @@ output: 7563
 ### for Read 2 check (performed on both files, but only one file example shown):
 
 ```
-zcat /projects/bgmp/shared/2017_sequencing/demultiplexed/22_3H_both_S16_L008_R2_001.fastq.gz |  grep 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT' | wc -l
+zcat /projects/bgmp/shared/2017_sequencing/demultiplexed/22_3H_both_S16_L008_R2_001.fastq.gz | \
+grep 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT' | wc -l
 ```	
 ```
 output: 7848
@@ -140,15 +140,21 @@ colnames(Seq_counts_23_4A) <- c("Post_Trim_Sequence_Length", "count_R1","len","c
 #Plotting the distributions
 colors <- c("Read 1" = "blue", "Read 2" = "red")
 
-distrib_22_3H = ggplot(data = Seq_counts_22_3H, aes(x = Post_Trim_Sequence_Length)) + geom_line(aes(y = count_R1, color = "Read 1")) + 
+distrib_22_3H = ggplot(data = Seq_counts_22_3H, aes(x = Post_Trim_Sequence_Length)) + 
+  geom_line(aes(y = count_R1, color = "Read 1")) + 
   geom_line(aes(y = count_R2, color = "Read 2")) +
-  labs(x="Read Length (bp)", y="Frequency (log10)", title = "Comparison of Read Lengths Post-Trim for 22_3H_both_S16", color = "Legend") + 
+  labs(x="Read Length (bp)", y="Frequency (log10)", 
+  title = "Comparison of Read Lengths Post-Trim for 22_3H_both_S16",
+  color = "Legend") + 
   scale_color_manual(values = colors) +
   scale_y_continuous(trans = 'log10', labels = scales::comma)
 
-distrib_23_4A = ggplot(data = Seq_counts_23_4A, aes(x = Post_Trim_Sequence_Length)) + geom_line(aes(y = count_R1, color = "Read 1")) + 
+distrib_23_4A = ggplot(data = Seq_counts_23_4A, aes(x = Post_Trim_Sequence_Length)) + 
+  geom_line(aes(y = count_R1, color = "Read 1")) + 
   geom_line(aes(y = count_R2, color = "Read 2")) +
-  labs(x="Read Length (bp)", y="Frequency (log10)", title = "Comparison of Read Lengths Post-Trim for 23_4A_control_S17", color = "Legend") + 
+  labs(x="Read Length (bp)", y="Frequency (log10)", 
+  title = "Comparison of Read Lengths Post-Trim for 23_4A_control_S17", 
+  color = "Legend") + 
   scale_color_manual(values = colors) +
   scale_y_continuous(trans = 'log10', labels = scales::comma)
 
@@ -194,6 +200,22 @@ Sequences Unmapped:  6154403
 cat HTseq_count.sh
 ```
 
+### The resulting files were then processed using the following code to sum the number of total feature hits. 
+
+```{bash}
+#22_3H_both_stranded 
+cat 22_3H_both_stranded | grep '^EN' | awk '{sum += $2}END{print sum }'
+
+#22_3H_both_unstranded
+cat 22_3H_both_unstranded | grep '^EN' | awk '{sum += $2}END{print sum }'
+
+#23_4A_control_stranded
+cat 23_4A_control_stranded | grep '^EN' | awk '{sum += $2}END{print sum }'
+
+#23_4A_control_unstranded
+cat 23_4A_control_unstranded | grep '^EN' | awk '{sum += $2}END{print sum }'
+```
+
 ### The results are summarized in the following tables:
 ### For 22_3H_both:
 | Statistic            | Stranded = yes | Stranded = no |
@@ -203,6 +225,11 @@ cat HTseq_count.sh
 | too_low_aQual        | 80,996         | 80,996        |
 | not_aligned          | 64,525         | 64,525        |
 | alignment_not_unique | 176,655        | 176,655       |
+|----------------------|----------------|---------------|
+| Total Sequences      | 4,042,352      | 4,042,352     |
+| Total Mapped         | 144,370        | 3,334,038     |
+| Percent Hit          | 3.57%          | 82.47%        |
+
 
 ### For 23_4A_control:
 | Statistic            | Stranded = yes | Stranded = no |
@@ -212,28 +239,12 @@ cat HTseq_count.sh
 | too_low_aQual        | 1,167,001      | 1,167,001     |
 | not_aligned          | 2,438,035      | 2,438,035     |
 | alignment_not_unique | 2,123,419      | 2,123,419     |
-
-### The HTseq output files were further parsed using the following script to generate additional statistics on each file:
-
-```{bash}
-cat HTseq_parser.py
-```
-
-### Statistics produced by the script are summarized in the following tables: 
-### For 22_3H_both:
-| Statistic                                              | Stranded = yes | Stranded = no |
-|--------------------------------------------------------|----------------|---------------|
-| Number of sequences with gene feature hits             | 8,147          | 15,631        |
-| Total number of gene feature hits across all sequences | 4,042,352      | 4,042,352     |
-| Percentage of gene features with hits                  | 14.7%          | 28.2%         |
-
-### For 23_4A_control:
-| Statistic                                              | Stranded = yes | Stranded = no |
-|--------------------------------------------------------|----------------|---------------|
-| Number of sequences with gene feature hits             | 15,511         | 23,330        |
-| Total number of gene feature hits across all sequences | 44,155,299     | 44,155,299    |
-| Percentage of gene features with hits                  | 27.99%         | 42.1%         |
+|----------------------|----------------|---------------|
+| Total Sequences      |  44155299      | 44155299      |
+| Total Mapped         |  1546457       | 32327308      |
+| Percent Hit          |  3.50%         | 73.21%        |
 
 
-### From these data, I would conclude that the the RNA-seq libraries were made without a strand-specific kit. In unstranded kits, about 50% of the reads would match the reference genome with the correct directionality. Looking at the tables, it appears that when the stranded flag = no, the percentage of gene features with hits just about doubles. I would expect to see this if the reads were mapping to both the forward and reverse strand of the reference genome. Furthermore, comparing the output tables from HTSeq, it appears that there are many more instances of sequences being classified as 'No_feature' when the kit is assumed to be stranded. Given these results, the reads must be a mixture of antisense/sense strands, thus suggesting the kit used to generate these libraries was unstranded.
+
+### From these data, I would conclude that the the RNA-seq libraries were made with a strand-specific kit. In stranded kits there should be 50% less reads that mapped when compared to the unstranded kits. This is because in stranded kits, only one of the two RNA strands gets used in the final library and so only one strand with a specific directionality gets mapped to the reference genome, halving the number of reads that mapped. Looking at the tables, it appears that when the stranded flag = no, the percentage of gene features with hits is 82% and 73% for the two libraries. Looking at the percentages for the stranded = yes column, both libraries show values of about 3.5%, much lower than the expected value of ~40% and ~35% if the kit was truly unstranded, and would display half the number of hits as the in the stranded = no run. For this reason I would conclude that the kits used were stranded. 
 
